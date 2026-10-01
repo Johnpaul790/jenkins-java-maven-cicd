@@ -35,6 +35,8 @@ The declarative pipeline runs on `agent any` and uses the Jenkins Maven installa
 | Docker Login | `dockerLogin()` | Authenticates to Docker Hub using Jenkins Credentials. |
 | Push Docker Image | `dockerPush(env.IMAGE_NAME)` | Publishes the image to Docker Hub. |
 
+![Jenkins pipeline](pictures/Jenkins-pipeline.png)
+
 ## Jenkins Shared Library
 
 Reusable CI/CD logic is maintained in the separate [jenkins-shared-library repository](https://github.com/Johnpaul790/jenkins-shared-library). The Jenkinsfile loads it with:
