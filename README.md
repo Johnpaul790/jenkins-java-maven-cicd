@@ -28,14 +28,18 @@ Docker Hub push
 
 The declarative pipeline runs on `agent any` and uses the Jenkins Maven installation named `maven-3.9.12`.
 
-| Stage | Shared-library function | Purpose |
-| --- | --- | --- |
-| Build JAR | `buildJar()` | Runs `mvn clean package` to produce an executable Spring Boot JAR. |
-| Build Docker Image | `buildImage(env.IMAGE_NAME)` | Builds the application image using the repository's Dockerfile. |
-| Docker Login | `dockerLogin()` | Authenticates to Docker Hub using Jenkins Credentials. |
-| Push Docker Image | `dockerPush(env.IMAGE_NAME)` | Publishes the image to Docker Hub. |
+| Stage | Description |
+| --- | --- |
+| Build JAR | Runs `mvn clean package`. |
+| Build Docker Image | Builds the Docker image. |
+| Docker Login | Authenticates to Docker Hub. |
+| Push Docker Image | Pushes the image to Docker Hub. |
 
-![Jenkins pipeline](pictures/Jenkins-pipeline.png)
+## Pipeline Execution
+
+The Jenkins multibranch pipeline successfully executes the Maven build, Docker image build, Docker Hub authentication, and image publishing stages.
+
+![Successful Jenkins pipeline](pictures/Jenkins-pipeline.png)
 
 ## Jenkins Shared Library
 
@@ -45,7 +49,7 @@ Reusable CI/CD logic is maintained in the separate [jenkins-shared-library repos
 @Library('jenkins-shared-library') _
 ```
 
-The application repository defines the pipeline stages and image name; the shared library implements the build, authentication, and publishing functions listed above.
+The application repository defines the pipeline stages and image name. The shared library provides `buildJar()`, `buildImage(env.IMAGE_NAME)`, `dockerLogin()`, and `dockerPush(env.IMAGE_NAME)` for build, authentication, and publishing.
 
 ## Repository Structure
 
@@ -106,3 +110,7 @@ The resulting Docker image was manually run as a container. The Spring Boot appl
 
 - Automated application tests: no test sources are present; Maven reports "No tests to run."
 - Automated deployment: the pipeline builds and publishes a runnable Docker image but does not deploy it to a runtime environment.
+
+## Project Background
+
+A personal DevOps project focused on Jenkins pipelines, reusable Shared Libraries, Maven builds, Docker image publishing, and credential management.
