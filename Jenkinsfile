@@ -1,39 +1,39 @@
-def gv
+@Library('jenkins-shared-library') _
 
 pipeline {
     agent any
+
     tools {
         maven 'maven-3.9.12'
     }
+
+    environment {
+        IMAGE_NAME = 'johnpaula/demo-app-2.2'
+    }
+
     stages {
-        stage("init") {
+        stage('Build JAR') {
             steps {
-                script{
-                    gv = load "script.groovy"
-                } 
+                buildJar()
             }
         }
-        stage("build jar") {
+
+        stage('Build Docker Image') {
             steps {
-                script{
-                    gv.buildJar()
-                }
+                buildImage(env.IMAGE_NAME)
             }
         }
-        stage("build image") {
+
+        stage('Docker Login') {
             steps {
-                script{
-                   gv.buildImage()
-                }
+                dockerLogin()
             }
         }
-        stage("deploy") {
+
+        stage('Push Docker Image') {
             steps {
-                script{
-                    gv.deployApp()
-                }
+                dockerPush(env.IMAGE_NAME)
             }
         }
     }
-    
 }
