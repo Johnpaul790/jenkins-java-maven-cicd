@@ -106,7 +106,3 @@ The resulting Docker image was manually run as a container. The Spring Boot appl
 
 - Automated application tests: no test sources are present; Maven reports "No tests to run."
 - Automated deployment: the pipeline builds and publishes a runnable Docker image but does not deploy it to a runtime environment.
-
-## Project Background
-
-This project was implemented as a hands-on DevOps project during technical training and further developed to practice Jenkins pipelines, reusable Shared Libraries, Maven builds, Docker workflows, credential management, and GitHub-based CI/CD.
