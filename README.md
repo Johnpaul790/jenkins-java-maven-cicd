@@ -9,20 +9,26 @@ Application repository: [jenkins-java-maven-cicd](https://github.com/Johnpaul790
 ## Architecture
 
 ```text
-GitHub
-  ↓
-Jenkins
-  ↓
+Developer pushes to GitHub
+        ↓
+GitHub Webhook
+        ↓
+Jenkins Multibranch Pipeline
+        ↓
 Jenkins Shared Library
-  ↓
+        ↓
 Maven clean package
-  ↓
+        ↓
 Docker image build
-  ↓
+        ↓
 Docker Hub authentication
-  ↓
+        ↓
 Docker Hub push
 ```
+A push to the application repository automatically sends a GitHub webhook to Jenkins. Jenkins scans the multibranch project, detects the updated main branch, and starts the application pipeline without requiring a manual build.
+
+The pipeline then loads the reusable Jenkins Shared Library and executes the Maven and Docker workflow.
+
 
 ## Pipeline Stages
 
@@ -99,6 +105,7 @@ The resulting Docker image was manually run as a container. The Spring Boot appl
 **Implemented:**
 
 - GitHub checkout through the Jenkins SCM workflow.
+- Automatic pipeline triggering from GitHub pushes using a repository webhook.
 - Maven clean packaging.
 - Jenkins Shared Library integration.
 - Docker image build.
