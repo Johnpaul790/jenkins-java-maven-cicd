@@ -20,6 +20,9 @@ Jenkins Multibranch Pipeline
 Jenkins Shared Library
         ↓
 Maven clean package
+        ├── Compile application
+        ├── Run Spring Boot integration test
+        └── Package executable JAR
         ↓
 Docker image build
         ↓
@@ -45,11 +48,43 @@ The declarative pipeline runs on `agent any` and uses the Jenkins Maven installa
 
 ## Pipeline Execution
 
-A push to the application repository automatically triggers the Jenkins Multibranch Pipeline through the configured GitHub webhook.
+When changes are pushed to the application repository, the GitHub webhook
+automatically triggers the Jenkins Multibranch Pipeline.
 
-The pipeline then executes the Maven build, Docker image build, Docker Hub authentication, and image publishing stages.
+The pipeline then:
+
+1. Builds the Java application with Maven.
+2. Runs the automated integration test.
+3. Packages the application as a JAR.
+4. Builds the Docker image.
+5. Authenticates to Docker Hub.
+6. Pushes the image to Docker Hub.
 
 ![Successful Jenkins pipeline](pictures/Jenkins-pipeline.png)
+
+
+## Automated Testing
+
+The Maven build includes an automated Spring Boot integration test located at:
+
+`src/test/java/com/example/ApplicationIntegrationTest.java`
+
+The test starts the Spring Boot application using a random available port and sends HTTP requests to the root endpoint (`/`).
+
+It verifies that:
+
+- the application responds with HTTP `200 OK`;
+- the returned page contains `Welcome to Java Maven Application`.
+
+The test runs automatically as part of:
+
+```bash
+mvn clean package
+```
+
+If the integration test fails, Maven returns a failed build result and Jenkins stops the pipeline before the Docker image build and push stages.
+
+This acts as a CI quality gate, ensuring that a Docker image is only built and published when the application successfully passes its automated test.
 
 ## Jenkins Shared Library
 
@@ -128,20 +163,22 @@ The resulting Docker image was manually run as a container. The Spring Boot appl
 
 **Implemented:**
 
-- GitHub checkout through the Jenkins SCM workflow.
 - Automatic pipeline triggering from GitHub pushes using a repository webhook.
-- Maven clean packaging.
-- Jenkins Shared Library integration.
-- Docker image build.
-- Jenkins credential-based Docker Hub authentication.
-- Docker image publishing.
-- Manual runtime verification.
+- Jenkins Multibranch Pipeline for branch-aware CI execution.
+- Reusable Jenkins Shared Library for Maven and Docker pipeline operations.
+- Maven build using `mvn clean package` to remove stale build artifacts before producing the JAR.
+- Automated Spring Boot integration test executed during the Maven build.
+- Integration test starts the application on a random port and verifies that the home page returns HTTP `200 OK` and the expected content.
+- Failed automated tests stop the pipeline before Docker image build and publication.
+- Docker image creation using the packaged Spring Boot JAR.
+- Docker Hub authentication using Jenkins Credentials.
+- Automated Docker image publication to Docker Hub.
+- Manual runtime verification of the published Docker image.
 
 **Not yet implemented:**
 
-- Automated application tests: no test sources are present; Maven reports "No tests to run."
-- Automated deployment: the pipeline builds and publishes a runnable Docker image but does not deploy it to a runtime environment.
+- Automated application deployment to a runtime environment.
 
 ## Project Background
 
-A personal DevOps project focused on Jenkins pipelines, reusable Shared Libraries, Maven builds, Docker image publishing, and credential management.
+A hands-on DevOps project focused on Jenkins pipelines, reusable Shared Libraries, automated Spring Boot integration testing, Maven builds, Docker image publishing, and secure credential management.
