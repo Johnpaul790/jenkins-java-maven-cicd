@@ -1,8 +1,10 @@
-# Java Maven Application — Jenkins CI/CD
+# Java Maven Application — Jenkins CI Pipeline
 
 ## Overview
 
-A personal hands-on DevOps project that uses Jenkins and a reusable Jenkins Shared Library to package a Java / Spring Boot application with Maven, build a runnable Docker image, and publish it to Docker Hub. The application serves a static welcome page over HTTP on port `8080`.
+A Jenkins-based CI project for a Java / Spring Boot application. A GitHub webhook automatically triggers a Jenkins Multibranch Pipeline, which loads a reusable Jenkins Shared Library to package the application with Maven, build a Docker image, authenticate to Docker Hub using Jenkins Credentials, and publish the image.
+
+The application serves a static welcome page over HTTP on port`8080`.
 
 Application repository: [jenkins-java-maven-cicd](https://github.com/Johnpaul790/jenkins-java-maven-cicd).
 
