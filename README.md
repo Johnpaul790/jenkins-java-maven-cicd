@@ -86,15 +86,31 @@ The application repository defines the pipeline stages and image name. The share
 
 ## Docker Image
 
-The pipeline sets `IMAGE_NAME` to `johnpaula/demo-app-2.2`; the published image uses the default `latest` tag: [`johnpaula/demo-app-2.2:latest`](https://hub.docker.com/r/johnpaula/demo-app-2.2). The `2.2` is part of the image repository name.
+The Jenkins pipeline builds and publishes the Docker image as:
 
-Maven packages `com.example:java-maven-app:1.1.1` as `target/java-maven-app-1.1.1.jar`. The Dockerfile uses `amazoncorretto:8-alpine3.17-jre`, exposes port `8080`, and copies the generated JAR to a stable filename:
+```text
+johnpaula/demo-app-2.2:latest
+```
+
+In the current setup, `demo-app-2.2` is the Docker Hub repository name and `latest` is the image tag.
+
+Maven packages the application as:
+
+```text
+target/java-maven-app-1.1.1.jar
+```
+
+Instead of hardcoding that versioned JAR filename in the container runtime configuration, the Dockerfile copies the generated artifact to the stable name `app.jar`:
 
 ```dockerfile
 COPY ./target/java-maven-app-*.jar /usr/app/app.jar
 WORKDIR /usr/app
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
+
+This keeps the Docker runtime configuration independent of the Maven application version. If the Maven artifact version changes later, the Dockerfile does not need to be updated just to match the new JAR filename.
+
+The image uses `amazoncorretto:8-alpine3.17-jre` as the Java runtime and exposes port `8080`.
 
 ## Credentials and Security
 
