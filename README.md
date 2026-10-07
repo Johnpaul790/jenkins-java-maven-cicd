@@ -53,7 +53,7 @@ The pipeline then executes the Maven build, Docker image build, Docker Hub authe
 
 ## Jenkins Shared Library
 
-Reusable CI/CD logic is maintained in the separate [jenkins-shared-library repository](https://github.com/Johnpaul790/jenkins-shared-library). The Jenkinsfile loads it with:
+Reusable CI logic is maintained in the separate [jenkins-shared-library repository](https://github.com/Johnpaul790/jenkins-shared-library). The Jenkinsfile loads it with:
 
 ```groovy
 @Library('jenkins-shared-library') _
