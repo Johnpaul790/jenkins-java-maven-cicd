@@ -45,7 +45,9 @@ The declarative pipeline runs on `agent any` and uses the Jenkins Maven installa
 
 ## Pipeline Execution
 
-The Jenkins multibranch pipeline successfully executes the Maven build, Docker image build, Docker Hub authentication, and image publishing stages.
+A push to the application repository automatically triggers the Jenkins Multibranch Pipeline through the configured GitHub webhook.
+
+The pipeline then executes the Maven build, Docker image build, Docker Hub authentication, and image publishing stages.
 
 ![Successful Jenkins pipeline](pictures/Jenkins-pipeline.png)
 
@@ -77,7 +79,7 @@ The application repository defines the pipeline stages and image name. The share
 
 ## Technologies
 
-- **Automation:** Jenkins, Jenkins Shared Libraries, Groovy.
+- **CI / Automation:** Jenkins, Jenkins Shared Libraries, Groovy.
 - **Application and build:** Java 8, Spring Boot, Maven.
 - **Containers and registry:** Docker, Amazon Corretto 8 runtime, Docker Hub.
 - **Version control and hosting:** Git, GitHub.
