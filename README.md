@@ -4,7 +4,7 @@
 
 A Jenkins-based CI project for a Java / Spring Boot application. A GitHub webhook automatically triggers a Jenkins Multibranch Pipeline, which loads a reusable Jenkins Shared Library to package the application with Maven, build a Docker image, authenticate to Docker Hub using Jenkins Credentials, and publish the image.
 
-The application serves a static welcome page over HTTP on port`8080`.
+The application serves a static welcome page over HTTP on port `8080`.
 
 Application repository: [jenkins-java-maven-cicd](https://github.com/Johnpaul790/jenkins-java-maven-cicd).
 
