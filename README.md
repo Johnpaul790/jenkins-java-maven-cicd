@@ -114,7 +114,11 @@ The image uses `amazoncorretto:8-alpine3.17-jre` as the Java runtime and exposes
 
 ## Credentials and Security
 
-Docker Hub authentication uses Jenkins Credentials with credential ID `docker-hub-repo`. Secrets are managed in Jenkins and are not stored in this repository.
+Docker Hub credentials are stored in Jenkins Credentials under the credential ID `docker-hub-repo` rather than being committed to the application or Shared Library repositories.
+
+The pipeline injects the Docker Hub username and password at runtime using Jenkins `withCredentials`. The shell expands the credential environment variables when running `docker login --password-stdin`, avoiding Groovy string interpolation of secrets.
+
+This keeps authentication data outside the source repositories while allowing the pipeline to authenticate to Docker Hub during image publishing.
 
 ## Runtime Verification
 
