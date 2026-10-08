@@ -48,16 +48,19 @@ The pipeline loads the reusable Jenkins Shared Library and executes the build, t
 
 ## Pipeline Stages
 
-The declarative pipeline runs on `agent any` and uses the Jenkins Maven installation named `maven-3.9.12`.
+The complete Jenkins execution includes Jenkins-generated Declarative stages, the parent `CI/CD` stage, and the nested application build and deployment stages. The pipeline runs on `agent any` and uses the Jenkins Maven installation named `maven-3.9.12`.
 
-| Stage | Description |
-| --- | --- |
-| Set Application Version | Reads the application version from `pom.xml` and combines it with the Jenkins build number and short Git commit SHA to create a traceable Docker image tag. |
-| Build JAR | Runs `mvn clean package`, including the automated integration test, and packages the executable JAR. |
-| Build Docker Image | Builds the Docker image using the generated versioned image name. |
-| Docker Login | Authenticates to Docker Hub using credentials stored in Jenkins. |
-| Push Docker Image | Pushes the versioned Docker image to Docker Hub. |
-| Deploy to EC2 | Uses SSH credentials from Jenkins to connect to the EC2 instance, pull the exact versioned image, replace the existing container, and verify the application over HTTP. |
+| Stage | Type | Description |
+| --- | --- | --- |
+| Declarative: Checkout SCM | Jenkins-generated | Checks out the application repository and makes the selected Git revision available in the Jenkins workspace. |
+| Declarative: Tool Install | Jenkins-generated | Prepares the configured Maven installation `maven-3.9.12` for the pipeline. |
+| CI/CD | Parent stage | Evaluates the path-based `when` condition and controls whether the application CI/CD workflow should run. |
+| Set Application Version | Pipeline stage | Reads the application version from `pom.xml` and combines it with the Jenkins build number and short Git commit SHA to create a traceable Docker image tag. |
+| Build JAR | Pipeline stage | Runs `mvn clean package`, executes the automated integration test, and packages the executable JAR. |
+| Build Docker Image | Pipeline stage | Builds the Docker image using the generated versioned image name. |
+| Docker Login | Pipeline stage | Authenticates to Docker Hub using credentials stored in Jenkins. |
+| Push Docker Image | Pipeline stage | Pushes the versioned Docker image to Docker Hub. |
+| Deploy to EC2 | Pipeline stage | Connects to EC2 over SSH, pulls the exact versioned image, replaces the running container, and verifies the application over HTTP. |
 
 ## Pipeline Execution
 
