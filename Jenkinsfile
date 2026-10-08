@@ -35,5 +35,12 @@ pipeline {
                 dockerPush(env.IMAGE_NAME)
             }
         }
+
+        stage('Deploy to EC2') {
+            steps {
+             deployToEC2(env.IMAGE_NAME)
+            }
+        }
+
     }
 }
