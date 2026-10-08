@@ -2,11 +2,9 @@
 
 ## Overview
 
-A Jenkins-based CI/CD project for a Java / Spring Boot application. A GitHub webhook automatically triggers a Jenkins Multibranch Pipeline, which loads a reusable Jenkins Shared Library to build and test the application with Maven, create a Docker image, authenticate to Docker Hub using Jenkins Credentials, publish the image, and automatically deploy it to an Amazon EC2 instance.
+A Jenkins-based CI/CD project for a Java / Spring Boot application. GitHub pushes automatically trigger a Jenkins Multibranch Pipeline that builds and tests the application, publishes a Docker image to Docker Hub, and deploys it to Amazon EC2.
 
-After deployment, the pipeline performs an HTTP smoke test against the running application. The deployment is only considered successful when the application responds successfully on port `8080`.
-
-The application serves a static welcome page over HTTP on port `8080`.
+After deployment, an HTTP smoke test verifies that the application is available on port `8080`.
 
 Application repository: [jenkins-java-maven-cicd](https://github.com/Johnpaul790/jenkins-java-maven-cicd).
 
@@ -44,13 +42,9 @@ HTTP smoke test with retries
         ↓
 Pipeline success or failure
 ```
-A push to the application repository automatically sends a GitHub webhook to Jenkins. Jenkins scans the Multibranch Pipeline, detects the updated main branch, and starts the pipeline without requiring a manual build.
+A push to the application repository sends a GitHub webhook to Jenkins, which detects the updated `main` branch and starts the Multibranch Pipeline automatically.
 
-The pipeline loads the reusable Jenkins Shared Library and executes the Maven build, automated integration test, Docker image build and publication, and EC2 deployment workflow.
-
-During deployment, Jenkins authenticates to the EC2 instance using an SSH private key stored securely in Jenkins Credentials. The EC2 host address is provided through Jenkins configuration rather than being hardcoded in the source repository.
-
-After starting the new container, Jenkins repeatedly checks http://localhost:8080/ on the EC2 instance. If the application does not become available within the configured retry window, the deployment stage fails.
+The pipeline loads the reusable Jenkins Shared Library and executes the build, test, Docker image publication, and EC2 deployment workflow. During deployment, Jenkins authenticates to EC2 using an SSH key stored in Jenkins Credentials. After the new container starts, the deployment step performs repeated HTTP checks against `http://localhost:8080/` on the EC2 instance and fails if the application does not become available within the retry window.
 
 ## Pipeline Stages
 
@@ -66,22 +60,9 @@ The declarative pipeline runs on `agent any` and uses the Jenkins Maven installa
 
 ## Pipeline Execution
 
-When changes are pushed to the application repository, the GitHub webhook automatically triggers the Jenkins Multibranch Pipeline.
+A push to the application repository automatically triggers the Jenkins Multibranch Pipeline through the GitHub webhook.
 
-The pipeline then:
-
-1. Builds the Java application with Maven using `mvn clean package`.
-2. Runs the automated Spring Boot integration test.
-3. Packages the application as an executable JAR.
-4. Builds the Docker image.
-5. Authenticates to Docker Hub using Jenkins Credentials.
-6. Pushes the Docker image to Docker Hub.
-7. Connects to the Amazon EC2 deployment target over SSH.
-8. Pulls the newly published Docker image.
-9. Stops and removes the previous application container.
-10. Starts a new container using the latest image.
-11. Performs an HTTP smoke test against the application with retries.
-12. Marks the pipeline successful only when the deployed application responds successfully.
+The pipeline runs the build, test, Docker image publication, and EC2 deployment stages defined above.
 
 ![Successful Jenkins pipeline](pictures/Jenkins-pipeline.png)
 
@@ -111,36 +92,77 @@ This acts as a CI quality gate, ensuring that a Docker image is only built and p
 
 ## Jenkins Shared Library
 
-Reusable CI logic is maintained in the separate [jenkins-shared-library repository](https://github.com/Johnpaul790/jenkins-shared-library). The Jenkinsfile loads it with:
+Reusable pipeline logic is maintained in the separate [jenkins-shared-library repository](https://github.com/Johnpaul790/jenkins-shared-library).
+
+The Jenkinsfile loads the Shared Library with:
 
 ```groovy
 @Library('jenkins-shared-library') _
 ```
 
-The application repository defines the pipeline stages and image name. The shared library provides `buildJar()`, `buildImage(env.IMAGE_NAME)`, `dockerLogin()`, and `dockerPush(env.IMAGE_NAME)` for build, authentication, and publishing.
+The application repository defines the high-level pipeline stages, while the Shared Library contains the reusable implementation logic.
+
+The pipeline uses the following Shared Library steps:
+
+- `buildJar()` — runs `mvn clean package`.
+- `buildImage(env.IMAGE_NAME)` — builds the Docker image.
+- `dockerLogin()` — authenticates to Docker Hub using Jenkins Credentials.
+- `dockerPush(env.IMAGE_NAME)` — publishes the Docker image.
+- `deployToEC2(env.IMAGE_NAME)` — connects to the EC2 deployment target over SSH, pulls the latest image, replaces the application container, and verifies the deployment.
+
+The Shared Library separates pipeline-facing functions from their implementation:
+
+```text
+jenkins-shared-library/
+├── vars/
+│   ├── buildJar.groovy
+│   ├── buildImage.groovy
+│   ├── dockerLogin.groovy
+│   ├── dockerPush.groovy
+│   └── deployToEC2.groovy
+│
+└── src/com/example/
+    └── Docker.groovy
+```
+
+Files under `vars/` expose reusable Jenkins pipeline steps, while Docker and deployment logic is implemented in the `Docker` class under `src/com/example/`.
+
+The Jenkinsfile invokes the deployment through the Shared Library step:
+
+```groovy
+deployToEC2(env.IMAGE_NAME)
+```
+
+The Shared Library then handles the underlying SSH connection, Docker image pull, container replacement, and deployment verification.
+
+Pipeline orchestration is defined in the Jenkinsfile, while reusable implementation logic is maintained in the Shared Library.
 
 ## Repository Structure
 
 ```text
 .
-├── Jenkinsfile                         # Declarative pipeline and shared-library integration
-├── Dockerfile                          # Java runtime image and JAR entrypoint
-├── pom.xml                             # Maven dependencies and executable JAR packaging
+├── Jenkinsfile
+├── Dockerfile
+├── pom.xml
 ├── README.md
 ├── .gitignore
 ├── pictures/
-│   └── Jenkins-pipeline.png            # Jenkins pipeline screenshot
-└── src/main/
-    ├── java/com/example/Application.java
-    └── resources/static/index.html
+│   └── Jenkins-pipeline.png
+└── src/
+    ├── main/
+    │   ├── java/com/example/Application.java
+    │   └── resources/static/index.html
+    └── test/
+        └── java/com/example/ApplicationIntegrationTest.java
 ```
 
 ## Technologies
 
-- **CI / Automation:** Jenkins, Jenkins Shared Libraries, Groovy.
+- **CI/CD:** Jenkins, Jenkins Shared Libraries, Groovy.
 - **Application and build:** Java 8, Spring Boot, Maven.
-- **Containers and registry:** Docker, Amazon Corretto 8 runtime, Docker Hub.
-- **Version control and hosting:** Git, GitHub.
+- **Containers and registry:** Docker, Amazon Corretto 8, Docker Hub.
+- **Cloud and deployment:** AWS EC2, SSH.
+- **Version control:** Git, GitHub.
 
 ## Docker Image
 
@@ -172,36 +194,40 @@ The image uses `amazoncorretto:8-alpine3.17-jre` as the Java runtime and exposes
 
 ## Credentials and Security
 
-Docker Hub credentials are stored in Jenkins Credentials under the credential ID `docker-hub-repo` rather than being committed to the application or Shared Library repositories.
+Docker Hub credentials are stored in Jenkins Credentials under the ID `docker-hub-repo` and injected at runtime using `withCredentials`.
 
-The pipeline injects the Docker Hub username and password at runtime using Jenkins `withCredentials`. The shell expands the credential environment variables when running `docker login --password-stdin`, avoiding Groovy string interpolation of secrets.
+EC2 deployment uses a separate SSH credential, `ec2-deploy-key`, loaded during the deployment stage with the SSH Agent plugin. The EC2 target is provided through the Jenkins environment variable `EC2_HOST` instead of being hardcoded in the repository.
 
-This keeps authentication data outside the source repositories while allowing the pipeline to authenticate to Docker Hub during image publishing.
+SSH host verification is enforced with `StrictHostKeyChecking=yes`, and the verified EC2 host key is stored in the Jenkins user's `known_hosts` file.
 
-## Runtime Verification
+The EC2 Security Group restricts SSH access on port `22` to the Jenkins server's public IP address.
 
-The resulting Docker image was manually run as a container. The Spring Boot application started successfully and responded over HTTP. This verification was performed manually and is not an automated pipeline stage.
+## Deployment Verification
 
-## Current Scope
+The published Docker image was first verified manually on the EC2 instance before deployment automation was added.
 
-**Implemented:**
+The current pipeline performs automated verification after deployment. The deployment stage starts the new container and checks the application over HTTP on port `8080`.
+
+The deployment stage retries the request while the Spring Boot application is starting. The pipeline only completes successfully when the application responds successfully.
+
+## Implemented Features
 
 - Automatic pipeline triggering from GitHub pushes using a repository webhook.
-- Jenkins Multibranch Pipeline for branch-aware CI execution.
-- Reusable Jenkins Shared Library for Maven and Docker pipeline operations.
-- Maven build using `mvn clean package` to remove stale build artifacts before producing the JAR.
-- Automated Spring Boot integration test executed during the Maven build.
-- Integration test starts the application on a random port and verifies that the home page returns HTTP `200 OK` and the expected content.
-- Failed automated tests stop the pipeline before Docker image build and publication.
+- Jenkins Multibranch Pipeline for branch-aware execution.
+- Reusable Jenkins Shared Library for Maven, Docker, and deployment operations.
+- Maven build using `mvn clean package`.
+- Automated Spring Boot integration testing during the Maven build.
+- Failed tests stop the pipeline before Docker image build and publication.
 - Docker image creation using the packaged Spring Boot JAR.
 - Docker Hub authentication using Jenkins Credentials.
 - Automated Docker image publication to Docker Hub.
-- Manual runtime verification of the published Docker image.
+- Automated deployment to an Amazon EC2 instance over SSH.
+- EC2 deployment authentication using an SSH private key stored in Jenkins Credentials.
+- Automatic replacement of the existing application container with the latest image.
+- Container restart policy using `--restart unless-stopped`.
+- Automated post-deployment HTTP verification with retries.
 
-**Not yet implemented:**
-
-- Automated application deployment to a runtime environment.
 
 ## Project Background
 
-A hands-on DevOps project focused on Jenkins pipelines, reusable Shared Libraries, automated Spring Boot integration testing, Maven builds, Docker image publishing, and secure credential management.
+A hands-on DevOps project focused on Jenkins CI/CD, reusable Shared Libraries, automated Spring Boot integration testing, Maven builds, Docker image publishing, secure credential management, and automated deployment to Amazon EC2.
