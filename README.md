@@ -1,4 +1,4 @@
-# Java Maven Application — Jenkins CI/CD Pipeline
+# Jenkins CI/CD Pipeline | Java, Maven & Docker
 
 ## Overview
 
