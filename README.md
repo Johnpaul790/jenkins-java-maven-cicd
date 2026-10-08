@@ -1,8 +1,10 @@
-# Java Maven Application — Jenkins CI Pipeline
+# Java Maven Application — Jenkins CI/CD Pipeline
 
 ## Overview
 
-A Jenkins-based CI project for a Java / Spring Boot application. A GitHub webhook automatically triggers a Jenkins Multibranch Pipeline, which loads a reusable Jenkins Shared Library to package the application with Maven, build a Docker image, authenticate to Docker Hub using Jenkins Credentials, and publish the image.
+A Jenkins-based CI/CD project for a Java / Spring Boot application. A GitHub webhook automatically triggers a Jenkins Multibranch Pipeline, which loads a reusable Jenkins Shared Library to build and test the application with Maven, create a Docker image, authenticate to Docker Hub using Jenkins Credentials, publish the image, and automatically deploy it to an Amazon EC2 instance.
+
+After deployment, the pipeline performs an HTTP smoke test against the running application. The deployment is only considered successful when the application responds successfully on port `8080`.
 
 The application serves a static welcome page over HTTP on port `8080`.
 
@@ -29,11 +31,26 @@ Docker image build
 Docker Hub authentication
         ↓
 Docker Hub push
+        ↓
+SSH deployment to Amazon EC2
+        ↓
+Pull latest Docker image
+        ↓
+Stop and remove previous container
+        ↓
+Start new application container
+        ↓
+HTTP smoke test with retries
+        ↓
+Pipeline success or failure
 ```
-A push to the application repository automatically sends a GitHub webhook to Jenkins. Jenkins scans the multibranch project, detects the updated main branch, and starts the application pipeline without requiring a manual build.
+A push to the application repository automatically sends a GitHub webhook to Jenkins. Jenkins scans the Multibranch Pipeline, detects the updated main branch, and starts the pipeline without requiring a manual build.
 
-The pipeline then loads the reusable Jenkins Shared Library and executes the Maven and Docker workflow.
+The pipeline loads the reusable Jenkins Shared Library and executes the Maven build, automated integration test, Docker image build and publication, and EC2 deployment workflow.
 
+During deployment, Jenkins authenticates to the EC2 instance using an SSH private key stored securely in Jenkins Credentials. The EC2 host address is provided through Jenkins configuration rather than being hardcoded in the source repository.
+
+After starting the new container, Jenkins repeatedly checks http://localhost:8080/ on the EC2 instance. If the application does not become available within the configured retry window, the deployment stage fails.
 
 ## Pipeline Stages
 
@@ -41,24 +58,30 @@ The declarative pipeline runs on `agent any` and uses the Jenkins Maven installa
 
 | Stage | Description |
 | --- | --- |
-| Build JAR | Runs `mvn clean package`. |
-| Build Docker Image | Builds the Docker image. |
-| Docker Login | Authenticates to Docker Hub. |
-| Push Docker Image | Pushes the image to Docker Hub. |
+| Build JAR | Runs `mvn clean package`, including the automated integration test, and packages the executable JAR. |
+| Build Docker Image | Builds the Docker image from the packaged Spring Boot application. |
+| Docker Login | Authenticates to Docker Hub using credentials stored in Jenkins. |
+| Push Docker Image | Pushes the newly built image to Docker Hub. |
+| Deploy to EC2 | Uses SSH credentials from Jenkins to connect to the EC2 instance, pull the latest image, replace the existing container, and verify the application over HTTP. |
 
 ## Pipeline Execution
 
-When changes are pushed to the application repository, the GitHub webhook
-automatically triggers the Jenkins Multibranch Pipeline.
+When changes are pushed to the application repository, the GitHub webhook automatically triggers the Jenkins Multibranch Pipeline.
 
 The pipeline then:
 
-1. Builds the Java application with Maven.
-2. Runs the automated integration test.
-3. Packages the application as a JAR.
+1. Builds the Java application with Maven using `mvn clean package`.
+2. Runs the automated Spring Boot integration test.
+3. Packages the application as an executable JAR.
 4. Builds the Docker image.
-5. Authenticates to Docker Hub.
-6. Pushes the image to Docker Hub.
+5. Authenticates to Docker Hub using Jenkins Credentials.
+6. Pushes the Docker image to Docker Hub.
+7. Connects to the Amazon EC2 deployment target over SSH.
+8. Pulls the newly published Docker image.
+9. Stops and removes the previous application container.
+10. Starts a new container using the latest image.
+11. Performs an HTTP smoke test against the application with retries.
+12. Marks the pipeline successful only when the deployed application responds successfully.
 
 ![Successful Jenkins pipeline](pictures/Jenkins-pipeline.png)
 
