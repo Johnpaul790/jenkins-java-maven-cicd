@@ -62,7 +62,7 @@ The declarative pipeline runs on `agent any` and uses the Jenkins Maven installa
 
 A push to the application repository automatically triggers the Jenkins Multibranch Pipeline through the GitHub webhook.
 
-The pipeline runs the build, test, Docker image publication, and EC2 deployment stages defined above.
+Changes to the application source, `pom.xml`, `Dockerfile`, or `Jenkinsfile` run the CI/CD workflow. Documentation-only changes still trigger Jenkins, but the build and deployment stages are skipped.
 
 ![Successful Jenkins pipeline](pictures/Jenkins-pipeline.png)
 
