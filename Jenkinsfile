@@ -8,7 +8,7 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = 'johnpaula/demo-app-2.2'
+        IMAGE_REPOSITORY = 'johnpaula/java-maven-app'
     }
 
     stages {
@@ -23,6 +23,24 @@ pipeline {
             }
 
             stages {
+                stage('Set Application Version') {
+                    steps {
+                        script {
+                            def version = sh(
+                                script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout',
+                                returnStdout: true
+                            ).trim()
+
+                            def shortCommit = env.GIT_COMMIT.take(7)
+
+                            env.IMAGE_NAME = "${env.IMAGE_REPOSITORY}:${version}-${env.BUILD_NUMBER}-${shortCommit}"
+
+                            echo "Application version: ${version}"
+                            echo "Docker image: ${env.IMAGE_NAME}"
+                        }
+                    }
+                }
+
                 stage('Build JAR') {
                     steps {
                         buildJar()
