@@ -32,7 +32,7 @@ Docker Hub push
         ↓
 SSH deployment to Amazon EC2
         ↓
-Pull latest Docker image
+Pull exact versioned Docker image
         ↓
 Stop and remove previous container
         ↓
@@ -52,11 +52,12 @@ The declarative pipeline runs on `agent any` and uses the Jenkins Maven installa
 
 | Stage | Description |
 | --- | --- |
+| Set Application Version | Reads the application version from `pom.xml` and combines it with the Jenkins build number and short Git commit SHA to create a traceable Docker image tag. |
 | Build JAR | Runs `mvn clean package`, including the automated integration test, and packages the executable JAR. |
-| Build Docker Image | Builds the Docker image from the packaged Spring Boot application. |
+| Build Docker Image | Builds the Docker image using the generated versioned image name. |
 | Docker Login | Authenticates to Docker Hub using credentials stored in Jenkins. |
-| Push Docker Image | Pushes the newly built image to Docker Hub. |
-| Deploy to EC2 | Uses SSH credentials from Jenkins to connect to the EC2 instance, pull the latest image, replace the existing container, and verify the application over HTTP. |
+| Push Docker Image | Pushes the versioned Docker image to Docker Hub. |
+| Deploy to EC2 | Uses SSH credentials from Jenkins to connect to the EC2 instance, pull the exact versioned image, replace the existing container, and verify the application over HTTP. |
 
 ## Pipeline Execution
 
@@ -108,7 +109,7 @@ The pipeline uses the following Shared Library steps:
 - `buildImage(env.IMAGE_NAME)` — builds the Docker image.
 - `dockerLogin()` — authenticates to Docker Hub using Jenkins Credentials.
 - `dockerPush(env.IMAGE_NAME)` — publishes the Docker image.
-- `deployToEC2(env.IMAGE_NAME)` — connects to the EC2 deployment target over SSH, pulls the latest image, replaces the application container, and verifies the deployment.
+- `deployToEC2(env.IMAGE_NAME)` — connects to the EC2 deployment target over SSH, pulls the exact versioned image, replaces the application container, and verifies the deployment.
 
 The Shared Library separates pipeline-facing functions from their implementation:
 
@@ -166,13 +167,25 @@ Pipeline orchestration is defined in the Jenkinsfile, while reusable implementat
 
 ## Docker Image
 
-The Jenkins pipeline builds and publishes the Docker image as:
+The Jenkins pipeline builds and publishes versioned Docker images using the following format:
 
 ```text
-johnpaula/demo-app-2.2:latest
+johnpaula/java-maven-app:<application-version>-<jenkins-build-number>-<git-commit>
 ```
 
-In the current setup, `demo-app-2.2` is the Docker Hub repository name and `latest` is the image tag.
+For example:
+
+```text
+johnpaula/java-maven-app:1.1.1-34-4d6ce3b
+```
+
+The image tag is generated from three values:
+
+- `1.1.1` — the application version read from `pom.xml`
+- `34` — the Jenkins build number
+- `4d6ce3b` — the shortened Git commit SHA
+
+This makes each published image traceable to both the application version and the exact Jenkins build and Git revision that produced it.
 
 Maven packages the application as:
 
@@ -223,7 +236,7 @@ The deployment stage retries the request while the Spring Boot application is st
 - Automated Docker image publication to Docker Hub.
 - Automated deployment to an Amazon EC2 instance over SSH.
 - EC2 deployment authentication using an SSH private key stored in Jenkins Credentials.
-- Automatic replacement of the existing application container with the latest image.
+- Automatic replacement of the existing application container with the exact versioned image.
 - Container restart policy using `--restart unless-stopped`.
 - Automated post-deployment HTTP verification with retries.
 
